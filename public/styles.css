@@ -63,6 +63,21 @@ select {
 
 .trait-slider input[type="range"] {
     width: calc(100% - 160px);
+    -webkit-appearance: none;
+    appearance: none;
+    height: 8px;
+    border-radius: 4px;
+    background: #e0e0e0;
+    outline: none;
+}
+
+.trait-slider input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #4CAF50;
+    cursor: pointer;
 }
 
 button {
@@ -90,6 +105,7 @@ button:hover {
     height: 400px;
     border: 1px solid #ddd;
     margin-bottom: 20px;
+    background: linear-gradient(to bottom, #87CEEB, #E8F5E9);
 }
 
 .ecosystem-controls {
@@ -100,6 +116,12 @@ button:hover {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    position: relative;
+    z-index: 2;
 }
 
 .ecosystem-stats div {
@@ -107,4 +129,7 @@ button:hover {
     background: #f8f9fa;
     border-radius: 4px;
     text-align: center;
+    font-size: 0.9em;
+    font-weight: 500;
+    color: #444;
 }
