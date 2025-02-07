@@ -197,34 +197,16 @@ class Organism {
 }
 
 class EcosystemSimulation {
-    constructor() {
-        this.authService = new AuthService();
-        this.initialize();
+    constructor(authManager, apiClient) {
+        this.authManager = authManager;
+        this.apiClient = apiClient;
         this.canvas = document.getElementById('ecosystem-canvas');
         this.ctx = this.canvas.getContext('2d');
         this.organisms = [];
         this.running = false;
+        this.environmentalCycles = { time: 0 };
         
         this.resizeCanvas();
-        window.addEventListener('resize', () => this.resizeCanvas());
-        
-        this.setupEventListeners();
-        this.setupFormHandling();
-        this.stats = {
-            populationHistory: [],
-            environmentHistory: [],
-            speciesDistribution: {}
-        };
-        this.setupAnalytics();
-        this.environmentalCycles = {
-            time: 0,
-            dayLength: 1000, // milliseconds
-            seasonLength: 4000 // milliseconds
-        };
-
-        this.authManager = new AuthManager();
-        this.apiClient = new APIClient(this.authManager);
-        this.initialize();
     }
 
     async initialize() {
@@ -297,6 +279,30 @@ class EcosystemSimulation {
         });
     }
 
+    async handleFormSubmit(event) {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const organismData = {
+            name: formData.get('name'),
+            type: formData.get('type'),
+            traits: {
+                growthRate: parseInt(formData.get('growth-rate')),
+                resourceConsumption: parseInt(formData.get('resource-consumption')),
+                resilience: parseInt(formData.get('resilience'))
+            }
+        };
+
+        try {
+            await this.apiClient.request('/api/organisms', {
+                method: 'POST',
+                body: JSON.stringify(organismData)
+            });
+            this.organisms.push(organismData);
+        } catch (error) {
+            console.error('Failed to create organism:', error);
+        }
+    }
+
     start() {
         if (!this.running) {
             this.running = true;
@@ -320,45 +326,40 @@ class EcosystemSimulation {
 
     async updateEnvironment() {
         try {
-            const response = await fetch('/api/ecosystem', {
+            const environmentData = {
+                temperature: Math.sin(this.environmentalCycles.time * Math.PI / 180) * 15 + 25,
+                humidity: 60 + Math.sin(this.environmentalCycles.time * Math.PI / 180) * 20,
+                pH: 7 + Math.sin(this.environmentalCycles.time * Math.PI / 180) * 0.5,
+                resources: {
+                    light: Math.sin(this.environmentalCycles.time * Math.PI / 180) * 500 + 500,
+                    water: 1000,
+                    nutrients: 1000
+                }
+            };
+
+            await this.apiClient.request('/api/ecosystem', {
                 method: 'PUT',
-                headers: this.authService.getHeaders(),
-                body: JSON.stringify({
-                    temperature: Math.sin(this.environmentalCycles.time * Math.PI / 180) * 15 + 25,
-                    humidity: 60 + Math.sin(this.environmentalCycles.time * Math.PI / 180) * 20,
-                    pH: 7 + Math.sin(this.environmentalCycles.time * Math.PI / 180) * 0.5,
-                    resources: {
-                        light: Math.sin(this.environmentalCycles.time * Math.PI / 180) * 500 + 500,
-                        water: 1000,
-                        nutrients: 1000
-                    }
-                })
+                body: JSON.stringify(environmentData)
             });
-            if (!response.ok) throw new Error('Failed to update environment');
+            return environmentData;
         } catch (error) {
             console.error('Error updating environment:', error);
-            this.pause();
+            throw error;
         }
     }
 
     async update() {
         if (!this.running) return;
         
-        this.clear();
-        await this.updateEnvironment();
-        
         try {
-            const ecosystem = await this.apiClient.request('/api/ecosystem', {
-                method: 'GET'
-            });
+            const environment = await this.updateEnvironment();
+            this.updateStats(environment);
+            this.clear();
             
-            this.organisms = this.organisms.filter(organism => !organism.die());
             for (const organism of this.organisms) {
-                await organism.update(ecosystem);
+                organism.update(environment);
                 organism.draw(this.ctx);
             }
-            
-            this.updateStats(ecosystem);
         } catch (error) {
             console.error('Error updating simulation:', error);
             this.pause();
@@ -367,11 +368,12 @@ class EcosystemSimulation {
         requestAnimationFrame(() => this.update());
     }
 
-    updateStats(ecosystem) {
-        document.getElementById('temperature').textContent = `Temperature: ${ecosystem.temperature}°C`;
-        document.getElementById('humidity').textContent = `Humidity: ${ecosystem.humidity}%`;
-        document.getElementById('pH').textContent = `pH: ${ecosystem.pH}`;
-        document.getElementById('resources').textContent = `Resources: ${ecosystem.resources.nutrients}`;
+    updateStats(environment) {
+        if (!environment) return;
+        document.getElementById('temperature').textContent = `Temperature: ${environment.temperature.toFixed(1)}°C`;
+        document.getElementById('humidity').textContent = `Humidity: ${environment.humidity.toFixed(1)}%`;
+        document.getElementById('pH').textContent = `pH: ${environment.pH.toFixed(2)}`;
+        document.getElementById('resources').textContent = `Light: ${environment.resources.light.toFixed(0)}`;
     }
 
     setupAnalytics() {

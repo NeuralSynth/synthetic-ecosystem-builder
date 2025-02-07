@@ -1,38 +1,25 @@
-class AuthService {
+class AuthManager {
     constructor() {
-        this.token = localStorage.getItem('token');
-        this.baseUrl = 'https://localhost:3000';
+        this.token = null;
+        this.isAuthenticated = false;
     }
 
-    async login() {
+    getAuthHeaders() {
+        return {
+            'Authorization': this.token ? `Bearer ${this.token}` : ''
+        };
+    }
+
+    async authenticate() {
         try {
-            const response = await fetch(`${this.baseUrl}/auth/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (!response.ok) throw new Error('Login failed');
-
+            const response = await fetch('/api/auth');
             const data = await response.json();
             this.token = data.token;
-            localStorage.setItem('token', this.token);
+            this.isAuthenticated = true;
             return true;
         } catch (error) {
             console.error('Authentication failed:', error);
             return false;
         }
-    }
-
-    getHeaders() {
-        return {
-            'Authorization': `Bearer ${this.token}`,
-            'Content-Type': 'application/json'
-        };
-    }
-
-    isAuthenticated() {
-        return !!this.token;
     }
 }
