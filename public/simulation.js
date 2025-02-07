@@ -1,23 +1,18 @@
-// public/simulation.js
 class Organism {
-    // Add new environmental response traits
-    constructor(name, type, traits, canvas) {  // Add canvas parameter
+    constructor(name, type, traits, canvas) {
         this.name = name;
         this.type = type;
         this.traits = {
             ...traits,
-            // Add temperature, humidity and pH tolerance
             tempOptimal: 25,
             humidityOptimal: 60,
             pHOptimal: 7,
-            // Track historical data
             history: {
                 energy: [],
                 growth: [],
                 age: []
             }
         };
-        // Use passed canvas parameter
         this.position = {
             x: Math.random() * canvas.width,
             y: Math.random() * canvas.height,
@@ -30,168 +25,36 @@ class Organism {
     }
 
     update(ecosystem) {
-        // Update organism state based on traits and environment
-        this.energy -= this.traits.resourceConsumption;
-        this.age++;
-        
-        // Growth
-        if (this.energy > 50) {
-            this.energy += this.traits.growthRate;
-        }
-        
-        // Resource consumption
-        if (this.type === 'producer') {
-            this.photosynthesize(ecosystem);
-        } else if (this.type === 'consumer') {
-            this.consumeOthers(ecosystem);
-        } else if (this.type === 'decomposer') {
-            this.decompose(ecosystem);
-        }
-        
-        // Environmental effects
-        this.handleEnvironmentalEffects(ecosystem);
-
-        // Reproduction
-        this.reproduce(ecosystem);
-
-        // Check for death
-        if (this.die()) {
-            const index = ecosystem.organisms.indexOf(this);
-            if (index > -1) {
-                ecosystem.organisms.splice(index, 1);
-            }
-        }
-    }
-
-    photosynthesize(ecosystem) {
-        const lightConsumption = this.traits.resourceConsumption;
-        if (ecosystem.resources.light >= lightConsumption) {
-            ecosystem.resources.light -= lightConsumption;
-            this.energy += this.traits.growthRate * 2;
-        }
-    }
-
-    consumeOthers(ecosystem) {
-        // Implement predator-prey interactions
-        this.organisms.forEach(prey => {
-            if (prey !== this && prey.type === 'producer' && this.type === 'consumer') {
-                const distance = Math.hypot(
-                    this.position.x - prey.position.x,
-                    this.position.y - prey.position.y
-                );
-                
-                if (distance < this.size + prey.size) {
-                    this.energy += prey.energy * 0.5;
-                    prey.energy = 0; // Prey dies
-                }
-            }
-        });
-    }
-
-    decompose(ecosystem) {
-        // Implement decomposition mechanics
-        ecosystem.resources.nutrients += this.traits.resourceConsumption;
-        this.energy += this.traits.growthRate * 
-            (ecosystem.resources.nutrients / 1000) * 
-            (ecosystem.humidity / 100);
-    }
-
-    handleEnvironmentalEffects(ecosystem) {
-        // Calculate environmental stress
-        const tempStress = Math.abs(this.traits.tempOptimal - ecosystem.temperature) / this.traits.resilience;
-        const humidityStress = Math.abs(this.traits.humidityOptimal - ecosystem.humidity) / this.traits.resilience;
-        const pHStress = Math.abs(this.traits.pHOptimal - ecosystem.pH) / this.traits.resilience;
-        
-        // Apply combined environmental effects
-        const totalStress = (tempStress + humidityStress + pHStress) / 3;
-        this.energy -= totalStress;
-
-        // Move organism
+        // Update position
         this.position.x += this.position.dx;
         this.position.y += this.position.dy;
 
-        // Bounce off walls
-        if (this.position.x < 0 || this.position.x > canvas.width) this.position.dx *= -1;
-        if (this.position.y < 0 || this.position.y > canvas.height) this.position.dy *= -1;
+        // Environmental effects
+        const tempDiff = Math.abs(ecosystem.temperature - this.traits.tempOptimal);
+        const humidityDiff = Math.abs(ecosystem.humidity - this.traits.humidityOptimal);
+        const pHDiff = Math.abs(ecosystem.pH - this.traits.pHOptimal);
 
-        // Record historical data
+        // Calculate stress factors
+        const environmentalStress = (tempDiff + humidityDiff + pHDiff) / 100;
+        
+        // Update energy based on environmental conditions
+        this.energy -= environmentalStress * (1 - this.traits.resilience / 100);
+        this.energy = Math.max(0, Math.min(100, this.energy));
+
+        // Update age
+        this.age++;
+
+        // Update history
         this.traits.history.energy.push(this.energy);
         this.traits.history.growth.push(this.size);
         this.traits.history.age.push(this.age);
     }
 
-    reproduce(ecosystem) {
-        if (this.energy > 150 && Math.random() < 0.1) {
-            const offspring = new Organism(
-                `${this.name}-offspring`,
-                this.type,
-                {
-                    ...this.traits,
-                    growthRate: this.traits.growthRate * (0.9 + Math.random() * 0.2),
-                    resourceConsumption: this.traits.resourceConsumption * (0.9 + Math.random() * 0.2),
-                    resilience: this.traits.resilience * (0.9 + Math.random() * 0.2)
-                },
-                ecosystem.canvas
-            );
-            
-            // Send new organism to server
-            fetch('/api/organisms', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    name: offspring.name,
-                    type: offspring.type,
-                    traits: offspring.traits
-                })
-            }).then(() => {
-                ecosystem.organisms.push(offspring);
-                this.energy -= 50;
-            }).catch(error => console.error('Error creating offspring:', error));
-        }
-    }
-
-    die() {
-        const isDead = this.energy <= 0 || this.age > 1000;
-        if (isDead) {
-            // Notify server about organism death
-            fetch(`/api/organisms/${this.name}`, {
-                method: 'DELETE'
-            }).catch(error => console.error('Error deleting organism:', error));
-        }
-        return isDead;
-    }
-
     draw(ctx) {
-        // Enhanced visualization
         ctx.beginPath();
-        ctx.arc(this.position.x, this.position.y, this.size + (this.energy / 20), 0, Math.PI * 2);
-        
-        // Color based on health
-        const healthPercent = this.energy / 100;
-        let color;
-        
-        switch(this.type) {
-            case 'producer':
-                color = `rgb(0, ${Math.floor(200 * healthPercent)}, 0)`;
-                break;
-            case 'consumer':
-                color = `rgb(${Math.floor(200 * healthPercent)}, 0, 0)`;
-                break;
-            case 'decomposer':
-                color = `rgb(${Math.floor(139 * healthPercent)}, ${Math.floor(69 * healthPercent)}, 19)`;
-                break;
-        }
-        
-        ctx.fillStyle = color;
+        ctx.arc(this.position.x, this.position.y, this.size, 0, Math.PI * 2);
+        ctx.fillStyle = this.energy > 50 ? '#4CAF50' : '#f44336';
         ctx.fill();
-        
-        // Draw name label
-        ctx.fillStyle = 'black';
-        ctx.font = '10px Arial';
-        ctx.fillText(this.name, this.position.x + this.size, this.position.y);
-        
         ctx.closePath();
     }
 }
@@ -282,22 +145,24 @@ class EcosystemSimulation {
     async handleFormSubmit(event) {
         event.preventDefault();
         const formData = new FormData(event.target);
-        const organismData = {
-            name: formData.get('name'),
-            type: formData.get('type'),
-            traits: {
+        
+        const organism = new Organism(
+            formData.get('name'),
+            formData.get('type'),
+            {
                 growthRate: parseInt(formData.get('growth-rate')),
                 resourceConsumption: parseInt(formData.get('resource-consumption')),
                 resilience: parseInt(formData.get('resilience'))
-            }
-        };
+            },
+            this.canvas
+        );
 
         try {
             await this.apiClient.request('/api/organisms', {
                 method: 'POST',
-                body: JSON.stringify(organismData)
+                body: JSON.stringify(organism)
             });
-            this.organisms.push(organismData);
+            this.organisms.push(organism);
         } catch (error) {
             console.error('Failed to create organism:', error);
         }
@@ -341,6 +206,7 @@ class EcosystemSimulation {
                 method: 'PUT',
                 body: JSON.stringify(environmentData)
             });
+            
             return environmentData;
         } catch (error) {
             console.error('Error updating environment:', error);
@@ -352,20 +218,33 @@ class EcosystemSimulation {
         if (!this.running) return;
         
         try {
-            const environment = await this.updateEnvironment();
-            this.updateStats(environment);
+            const ecosystem = await this.apiClient.request('/api/ecosystem', {
+                method: 'GET'
+            });
+
             this.clear();
             
-            for (const organism of this.organisms) {
-                organism.update(environment);
+            for (const organismData of this.organisms) {
+                // Ensure organism is an instance of Organism class
+                const organism = organismData instanceof Organism ? 
+                    organismData : 
+                    new Organism(
+                        organismData.name,
+                        organismData.type,
+                        organismData.traits,
+                        this.canvas
+                    );
+                
+                organism.update(ecosystem);
                 organism.draw(this.ctx);
             }
+
+            this.updateStats(ecosystem);
+            requestAnimationFrame(() => this.update());
         } catch (error) {
             console.error('Error updating simulation:', error);
             this.pause();
         }
-        
-        requestAnimationFrame(() => this.update());
     }
 
     updateStats(environment) {

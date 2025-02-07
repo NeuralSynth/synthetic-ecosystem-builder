@@ -1,0 +1,22 @@
+# Core dependencies
+numpy>=1.21.0
+websockets>=10.0
+aiohttp>=3.8.0
+asyncio>=3.4.3
+
+# Core visualization dependencies
+pyglet==2.0.10
+trimesh>=3.9.0
+
+# Development dependencies
+pytest>=7.0.0
+black>=22.0.0
+
+# 3D visualization alternatives (since Omniverse isn't accessible)
+numpy-stl>=2.16.0
+open3d>=0.13.0
+
+# NVIDIA Omniverse dependencies
+omni.kit.common @ https://d4i3qtqj3r0z5.cloudfront.net/python-lib/omni.kit.common-0.1.0-py3-none-any.whl
+omni.kit.core @ https://d4i3qtqj3r0z5.cloudfront.net/python-lib/omni.kit.core-0.1.0-py3-none-any.whl
+omni.kit.usd @ https://d4i3qtqj3r0z5.cloudfront.net/python-lib/omni.kit.usd-0.1.0-py3-none-any.whl
