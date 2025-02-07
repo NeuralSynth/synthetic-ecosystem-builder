@@ -1,0 +1,73 @@
+// public/index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synthetic Ecosystem Builder</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Synthetic Ecosystem Builder</h1>
+        </header>
+        
+        <div class="main-content">
+            <div class="organism-designer">
+                <h2>Organism Designer</h2>
+                <form id="organism-form">
+                    <div class="form-group">
+                        <label for="name">Name:</label>
+                        <input type="text" id="name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="type">Type:</label>
+                        <select id="type">
+                            <option value="producer">Producer</option>
+                            <option value="consumer">Consumer</option>
+                            <option value="decomposer">Decomposer</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Traits:</label>
+                        <div class="trait-slider">
+                            <label for="growth-rate">Growth Rate:</label>
+                            <input type="range" id="growth-rate" min="1" max="10" value="5">
+                        </div>
+                        <div class="trait-slider">
+                            <label for="resource-consumption">Resource Consumption:</label>
+                            <input type="range" id="resource-consumption" min="1" max="10" value="5">
+                        </div>
+                        <div class="trait-slider">
+                            <label for="resilience">Environmental Resilience:</label>
+                            <input type="range" id="resilience" min="1" max="10" value="5">
+                        </div>
+                    </div>
+                    
+                    <button type="submit">Create Organism</button>
+                </form>
+            </div>
+            
+            <div class="ecosystem-viewer">
+                <h2>Ecosystem Simulation</h2>
+                <canvas id="ecosystem-canvas"></canvas>
+                <div class="ecosystem-controls">
+                    <button id="start-simulation">Start Simulation</button>
+                    <button id="pause-simulation">Pause</button>
+                    <button id="reset-simulation">Reset</button>
+                </div>
+                <div class="ecosystem-stats">
+                    <div id="temperature"></div>
+                    <div id="humidity"></div>
+                    <div id="pH"></div>
+                    <div id="resources"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="simulation.js"></script>
+</body>
+</html>
