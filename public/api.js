@@ -1,8 +1,7 @@
 class APIClient {
     constructor(authManager) {
         this.authManager = authManager;
-        // Use window.location.origin instead of process.env
-        this.baseURL = 'http://localhost:3000';
+        this.baseURL = window.location.origin;
         this.retryAttempts = 3;
     }
     

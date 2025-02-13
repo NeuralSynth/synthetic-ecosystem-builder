@@ -70,14 +70,15 @@ class EcosystemSimulation {
         this.environmentalCycles = { time: 0 };
         
         this.resizeCanvas();
+        this.setupEventListeners();
+        this.setupFormHandling();
     }
 
     async initialize() {
-        if (!this.authService.isAuthenticated()) {
-            await this.authService.login();
+        if (!this.authManager.isAuthenticated) {
+            await this.authManager.authenticate();
         }
         try {
-            await this.authManager.authenticate();
             await this.loadInitialState();
         } catch (error) {
             console.error('Failed to initialize simulation:', error);
@@ -115,31 +116,7 @@ class EcosystemSimulation {
     }
 
     setupFormHandling() {
-        document.getElementById('organism-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            const organism = new Organism(
-                document.getElementById('name').value,
-                document.getElementById('type').value,
-                {
-                    growthRate: parseInt(document.getElementById('growth-rate').value),
-                    resourceConsumption: parseInt(document.getElementById('resource-consumption').value),
-                    resilience: parseInt(document.getElementById('resilience').value)
-                },
-                this.canvas  // Pass canvas reference
-            );
-            
-            this.organisms.push(organism);
-            
-            // Send to server
-            fetch('/api/organisms', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(organism)
-            });
-        });
+        document.getElementById('organism-form').addEventListener('submit', (e) => this.handleFormSubmit(e));
     }
 
     async handleFormSubmit(event) {
@@ -224,17 +201,7 @@ class EcosystemSimulation {
 
             this.clear();
             
-            for (const organismData of this.organisms) {
-                // Ensure organism is an instance of Organism class
-                const organism = organismData instanceof Organism ? 
-                    organismData : 
-                    new Organism(
-                        organismData.name,
-                        organismData.type,
-                        organismData.traits,
-                        this.canvas
-                    );
-                
+            for (const organism of this.organisms) {
                 organism.update(ecosystem);
                 organism.draw(this.ctx);
             }
@@ -310,5 +277,8 @@ class EcosystemSimulation {
 
 // Initialize simulation when page loads
 document.addEventListener('DOMContentLoaded', () => {
-    new EcosystemSimulation();
+    const authManager = new AuthManager();
+    const apiClient = new APIClient(authManager);
+    const simulation = new EcosystemSimulation(authManager, apiClient);
+    simulation.initialize();
 });

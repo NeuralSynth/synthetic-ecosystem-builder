@@ -47,7 +47,7 @@ app.post('/api/auth', (req, res) => {
         // Generate a more secure token
         const token = jwt.sign(
             { 
-                userId: 'test-user',
+                user: 'test-user',
                 timestamp: Date.now()
             },
             process.env.JWT_SECRET || 'your-secret-key',
